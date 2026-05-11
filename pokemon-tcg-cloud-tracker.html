@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pokemon-tcg-cloud-tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Art direction: coleção Pokémon TCG → app de catálogo sóbrio e colecionável
+       Palette: neutra com acento teal para ações e destaques
+       Typography: Fraunces + Inter — personalidade para o título e clareza para dados
+       Density: balanced */
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-surface-offset: #f3f0ec;
+      --color-border: #d4d1ca;
+      --color-divider: #dcd9d5;
+      --color-text: #28251d;
+      --color-text-muted: #66635d;
+      --color-text-faint: #99958e;
+      --color-text-inverse: #f9f8f4;
+      --color-primary: #01696f;
+      --color-primary-hover: #0c4e54;
+      --color-primary-highlight: #cedcd8;
+      --color-success: #437a22;
+      --color-warning: #964219;
+      --color-error: #a12c7b;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+      --shadow-sm: 0 1px 2px rgba(24,24,24,.06);
+      --shadow-md: 0 12px 32px rgba(24,24,24,.09);
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-body: 'Inter', Arial, sans-serif;
+      --transition-interactive: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #201f1d;
+      --color-surface-offset: #242320;
+      --color-border: #393836;
+      --color-divider: #2b2a27;
+      --color-text: #e3e0db;
+      --color-text-muted: #b0aba3;
+      --color-text-faint: #7e7a73;
+      --color-text-inverse: #171614;
+      --color-primary: #58a8b4;
+      --color-primary-hover: #7cbac3;
+      --color-primary-highlight: #27393d;
+      --color-success: #8ac25d;
+      --color-warning: #d39062;
+      --color-error: #dd85ba;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.22);
+      --shadow-md: 0 12px 32px rgba(0,0,0,.36);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;scroll-behavior:smooth}
+    body{min-height:100dvh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);font-size:var(--text-base);line-height:1.55}
+    button,input,select,textarea{font:inherit;color:inherit}
+    table{border-collapse:collapse;width:100%}
+    a,button,input,select,textarea{transition:background var(--transition-interactive),border-color var(--transition-interactive),color var(--transition-interactive),box-shadow var(--transition-interactive)}
+    .app-shell{display:grid;grid-template-columns:320px 1fr;min-height:100dvh}
+    .sidebar{background:var(--color-surface);border-right:1px solid var(--color-border);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)}
+    .brand{display:flex;align-items:center;gap:var(--space-3)}
+    .logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--color-primary-highlight),var(--color-surface-2));display:grid;place-items:center;border:1px solid var(--color-border)}
+    .logo svg{width:26px;height:26px;color:var(--color-primary)}
+    h1{font-family:var(--font-display);font-size:var(--text-xl);line-height:1.02}
+    .muted{color:var(--color-text-muted)}
+    .tiny{font-size:var(--text-xs);color:var(--color-text-faint)}
+    .panel{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--shadow-sm)}
+    .stack{display:flex;flex-direction:column;gap:var(--space-4)}
+    .field{display:flex;flex-direction:column;gap:var(--space-2)}
+    .field label{font-size:var(--text-sm);font-weight:600}
+    .input,.select,.textarea{width:100%;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);padding:0.8rem 0.9rem}
+    .input:focus,.select:focus,.textarea:focus{outline:2px solid color-mix(in srgb,var(--color-primary) 55%, transparent);outline-offset:2px;border-color:var(--color-primary)}
+    .toolbar{display:flex;gap:var(--space-3);flex-wrap:wrap}
+    .btn{min-height:44px;padding:0.8rem 1rem;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface);font-weight:600}
+    .btn:hover{background:var(--color-surface-offset)}
+    .btn-primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-text-inverse)}
+    .btn-primary:hover{background:var(--color-primary-hover)}
+    .btn-ghost{background:transparent}
+    .main{display:flex;flex-direction:column;min-width:0}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--color-surface) 88%, transparent);backdrop-filter:blur(10px);position:sticky;top:0;z-index:10}
+    .content{padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-4)}
+    .stat-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--shadow-sm)}
+    .stat-card strong{display:block;font-size:var(--text-lg);margin-top:var(--space-2)}
+    .search-row{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,0.7fr));gap:var(--space-3)}
+    .table-wrap{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-sm)}
+    .table-scroll{overflow:auto;max-height:68vh}
+    th,td{padding:0.8rem;border-bottom:1px solid var(--color-divider);text-align:left;vertical-align:top;font-size:var(--text-sm)}
+    th{position:sticky;top:0;background:var(--color-surface-offset);z-index:1}
+    tbody tr:hover{background:color-mix(in srgb,var(--color-primary-highlight) 30%, var(--color-surface))}
+    .cell-input,.cell-select,.cell-textarea{width:100%;min-width:110px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface-2);padding:0.55rem 0.6rem;font-size:var(--text-sm)}
+    .cell-textarea{min-width:180px;min-height:46px;resize:vertical}
+    .badge{display:inline-flex;align-items:center;gap:0.35rem;padding:0.35rem 0.65rem;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:700;background:var(--color-primary-highlight);color:var(--color-primary)}
+    .status-dot{width:8px;height:8px;border-radius:999px;background:currentColor}
+    .login-overlay{position:fixed;inset:0;background:rgba(15,15,15,.36);display:grid;place-items:center;padding:var(--space-4);z-index:30}
+    .login-card{width:min(100%,460px);background:var(--color-surface);border:1px solid var(--color-border);border-radius:24px;padding:var(--space-6);box-shadow:var(--shadow-md)}
+    .hidden{display:none!important}
+    .helper{font-size:var(--text-sm);color:var(--color-text-muted)}
+    .notice{padding:0.85rem 1rem;border-radius:var(--radius-md);background:var(--color-primary-highlight);color:var(--color-text);font-size:var(--text-sm)}
+    .divider{height:1px;background:var(--color-divider)}
+    @media (max-width: 1100px){.app-shell{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--color-border)}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 740px){.content,.topbar,.sidebar{padding:var(--space-4)}.search-row{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.toolbar{flex-direction:column}.btn{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card stack">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PokéDex Vault logo">
+            <circle cx="32" cy="32" r="20" stroke="currentColor" stroke-width="4"></circle>
+            <path d="M12 32H52" stroke="currentColor" stroke-width="4"></path>
+            <circle cx="32" cy="32" r="7" fill="currentColor"></circle>
+          </svg>
+        </div>
+        <div>
+          <div class="badge"><span class="status-dot"></span>Nuvem</div>
+          <h1 style="font-size:var(--text-lg);margin-top:0.5rem">PokéDex Vault</h1>
+        </div>
+      </div>
+      <p class="muted">Faça login com e-mail e senha para acessar sua coleção em qualquer dispositivo.</p>
+      <div class="field"><label for="supabaseUrl">Supabase URL</label><input id="supabaseUrl" class="input" placeholder="https://SEU-PROJETO.supabase.co"></div>
+      <div class="field"><label for="supabaseAnonKey">Supabase anon key</label><textarea id="supabaseAnonKey" class="textarea" rows="3" placeholder="Cole aqui a anon public key"></textarea></div>
+      <div class="field"><label for="email">E-mail</label><input id="email" type="email" class="input" placeholder="voce@exemplo.com"></div>
+      <div class="field"><label for="password">Senha</label><input id="password" type="password" class="input" placeholder="Sua senha"></div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="loginBtn">Entrar</button>
+        <button class="btn" id="signupBtn">Criar conta</button>
+      </div>
+      <div id="authMessage" class="notice">Preencha os dados do seu projeto Supabase e entre. As credenciais do projeto ficam apenas nesta sessão do navegador.</div>
+      <details>
+        <summary class="helper">Configuração rápida do banco</summary>
+        <div class="stack" style="margin-top:1rem">
+          <p class="helper">1. Crie um projeto no Supabase. 2. Ative Auth com e-mail/senha. 3. Crie a tabela <strong>pokemon_collection_entries</strong>. 4. Use as colunas listadas no script SQL abaixo.</p>
+          <textarea class="textarea" rows="14" readonly>create table public.pokemon_collection_entries (
+  user_id uuid not null,
+  pokemon_id integer not null,
+  pokemon_name text not null,
+  generation integer not null,
+  status text,
+  card_number text,
+  set_name text,
+  rarity text,
+  language text,
+  condition text,
+  acquisition_value numeric,
+  acquisition_date date,
+  notes text,
+  updated_at timestamptz default now(),
+  primary key (user_id, pokemon_id)
+);
+
+alter table public.pokemon_collection_entries enable row level security;
+
+create policy "users read own entries"
+on public.pokemon_collection_entries for select
+using (auth.uid() = user_id);
+
+create policy "users insert own entries"
+on public.pokemon_collection_entries for insert
+with check (auth.uid() = user_id);
+
+create policy "users update own entries"
+on public.pokemon_collection_entries for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);</textarea>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="PokéDex Vault logo">
+            <circle cx="32" cy="32" r="20" stroke="currentColor" stroke-width="4"></circle>
+            <path d="M12 32H52" stroke="currentColor" stroke-width="4"></path>
+            <circle cx="32" cy="32" r="7" fill="currentColor"></circle>
+          </svg>
+        </div>
+        <div>
+          <div class="tiny">Pokémon TCG</div>
+          <h1>PokéDex Vault</h1>
+        </div>
+      </div>
+      <p class="muted">Catálogo em nuvem para acompanhar ilustrações raras da 1ª e 2ª geração com login, sincronização e filtros rápidos.</p>
+      <div class="panel stack">
+        <div>
+          <div class="tiny">Conta conectada</div>
+          <div id="userEmail" style="font-weight:700;margin-top:0.35rem">—</div>
+        </div>
+        <div class="toolbar">
+          <button class="btn" id="syncBtn">Sincronizar</button>
+          <button class="btn btn-ghost" id="logoutBtn">Sair</button>
+        </div>
+      </div>
+      <div class="panel stack">
+        <div class="field">
+          <label for="searchInput">Pesquisa</label>
+          <input id="searchInput" class="input" placeholder="Ex.: Charizard, Johto, holo...">
+        </div>
+        <div class="toolbar">
+          <button class="btn" id="clearSearchBtn">Limpar pesquisa</button>
+        </div>
+        <div class="field">
+          <label for="generationFilter">Geração</label>
+          <select id="generationFilter" class="select">
+            <option value="all">Todas</option>
+            <option value="1">Geração 1</option>
+            <option value="2">Geração 2</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter" class="select">
+            <option value="all">Todos</option>
+            <option value="owned">Adquirida</option>
+            <option value="wishlist">Wishlist</option>
+            <option value="missing">Sem registro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rarityFilter">Raridade</label>
+          <select id="rarityFilter" class="select">
+            <option value="all">Todas</option>
+            <option>Illustration Rare</option>
+            <option>Special Illustration Rare</option>
+            <option>Alt Art</option>
+            <option>Secret Rare</option>
+            <option>Promo</option>
+            <option>Holo Rare</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel stack">
+        <div class="tiny">Observação</div>
+        <p class="helper">Esta versão usa Supabase para autenticação e banco em nuvem. Assim, você pode acessar sua coleção do celular, notebook ou outro navegador, desde que entre com a mesma conta.</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="badge"><span class="status-dot"></span>251 Pokémons</div>
+          <p class="muted" style="margin-top:0.4rem">Kanto + Johto, com edição direta e persistência online.</p>
+        </div>
+        <div class="toolbar">
+          <button class="btn" data-theme-toggle aria-label="Alternar tema">🌙</button>
+          <button class="btn" id="exportCsvBtn">Exportar CSV</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="stats">
+          <div class="stat-card"><div class="tiny">Adquiridas</div><strong id="ownedCount">0</strong></div>
+          <div class="stat-card"><div class="tiny">Wishlist</div><strong id="wishlistCount">0</strong></div>
+          <div class="stat-card"><div class="tiny">Valor investido</div><strong id="totalValue">R$ 0,00</strong></div>
+          <div class="stat-card"><div class="tiny">Resultados visíveis</div><strong id="visibleCount">251</strong></div>
+        </div>
+
+        <div class="panel stack">
+          <div class="search-row">
+            <input id="quickSearchInput" class="input" placeholder="Pesquisar por Pokémon, set, idioma, número ou observações">
+            <select id="quickStatusFilter" class="select">
+              <option value="all">Status</option>
+              <option value="owned">Adquirida</option>
+              <option value="wishlist">Wishlist</option>
+              <option value="missing">Sem registro</option>
+            </select>
+            <select id="quickGenerationFilter" class="select">
+              <option value="all">Geração</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+            <button class="btn" id="clearAllFiltersBtn">Limpar filtros</button>
+          </div>
+          <div id="syncMessage" class="notice">Entre com sua conta para carregar e salvar sua coleção na nuvem.</div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Pokémon</th>
+                  <th>Ger.</th>
+                  <th>Status</th>
+                  <th>Nº carta</th>
+                  <th>Set</th>
+                  <th>Raridade</th>
+                  <th>Idioma</th>
+                  <th>Condição</th>
+                  <th>Valor</th>
+                  <th>Data</th>
+                  <th>Observações</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const pokemonList = [
+      [1,'Bulbasaur',1],[2,'Ivysaur',1],[3,'Venusaur',1],[4,'Charmander',1],[5,'Charmeleon',1],[6,'Charizard',1],[7,'Squirtle',1],[8,'Wartortle',1],[9,'Blastoise',1],[10,'Caterpie',1],
+      [11,'Metapod',1],[12,'Butterfree',1],[13,'Weedle',1],[14,'Kakuna',1],[15,'Beedrill',1],[16,'Pidgey',1],[17,'Pidgeotto',1],[18,'Pidgeot',1],[19,'Rattata',1],[20,'Raticate',1],
+      [21,'Spearow',1],[22,'Fearow',1],[23,'Ekans',1],[24,'Arbok',1],[25,'Pikachu',1],[26,'Raichu',1],[27,'Sandshrew',1],[28,'Sandslash',1],[29,'Nidoran♀',1],[30,'Nidorina',1],
+      [31,'Nidoqueen',1],[32,'Nidoran♂',1],[33,'Nidorino',1],[34,'Nidoking',1],[35,'Clefairy',1],[36,'Clefable',1],[37,'Vulpix',1],[38,'Ninetales',1],[39,'Jigglypuff',1],[40,'Wigglytuff',1],
+      [41,'Zubat',1],[42,'Golbat',1],[43,'Oddish',1],[44,'Gloom',1],[45,'Vileplume',1],[46,'Paras',1],[47,'Parasect',1],[48,'Venonat',1],[49,'Venomoth',1],[50,'Diglett',1],
+      [51,'Dugtrio',1],[52,'Meowth',1],[53,'Persian',1],[54,'Psyduck',1],[55,'Golduck',1],[56,'Mankey',1],[57,'Primeape',1],[58,'Growlithe',1],[59,'Arcanine',1],[60,'Poliwag',1],
+      [61,'Poliwhirl',1],[62,'Poliwrath',1],[63,'Abra',1],[64,'Kadabra',1],[65,'Alakazam',1],[66,'Machop',1],[67,'Machoke',1],[68,'Machamp',1],[69,'Bellsprout',1],[70,'Weepinbell',1],
+      [71,'Victreebel',1],[72,'Tentacool',1],[73,'Tentacruel',1],[74,'Geodude',1],[75,'Graveler',1],[76,'Golem',1],[77,'Ponyta',1],[78,'Rapidash',1],[79,'Slowpoke',1],[80,'Slowbro',1],
+      [81,'Magnemite',1],[82,'Magneton',1],[83,'Farfetch’d',1],[84,'Doduo',1],[85,'Dodrio',1],[86,'Seel',1],[87,'Dewgong',1],[88,'Grimer',1],[89,'Muk',1],[90,'Shellder',1],
+      [91,'Cloyster',1],[92,'Gastly',1],[93,'Haunter',1],[94,'Gengar',1],[95,'Onix',1],[96,'Drowzee',1],[97,'Hypno',1],[98,'Krabby',1],[99,'Kingler',1],[100,'Voltorb',1],
+      [101,'Electrode',1],[102,'Exeggcute',1],[103,'Exeggutor',1],[104,'Cubone',1],[105,'Marowak',1],[106,'Hitmonlee',1],[107,'Hitmonchan',1],[108,'Lickitung',1],[109,'Koffing',1],[110,'Weezing',1],
+      [111,'Rhyhorn',1],[112,'Rhydon',1],[113,'Chansey',1],[114,'Tangela',1],[115,'Kangaskhan',1],[116,'Horsea',1],[117,'Seadra',1],[118,'Goldeen',1],[119,'Seaking',1],[120,'Staryu',1],
+      [121,'Starmie',1],[122,'Mr. Mime',1],[123,'Scyther',1],[124,'Jynx',1],[125,'Electabuzz',1],[126,'Magmar',1],[127,'Pinsir',1],[128,'Tauros',1],[129,'Magikarp',1],[130,'Gyarados',1],
+      [131,'Lapras',1],[132,'Ditto',1],[133,'Eevee',1],[134,'Vaporeon',1],[135,'Jolteon',1],[136,'Flareon',1],[137,'Porygon',1],[138,'Omanyte',1],[139,'Omastar',1],[140,'Kabuto',1],
+      [141,'Kabutops',1],[142,'Aerodactyl',1],[143,'Snorlax',1],[144,'Articuno',1],[145,'Zapdos',1],[146,'Moltres',1],[147,'Dratini',1],[148,'Dragonair',1],[149,'Dragonite',1],[150,'Mewtwo',1],
+      [151,'Mew',1],[152,'Chikorita',2],[153,'Bayleef',2],[154,'Meganium',2],[155,'Cyndaquil',2],[156,'Quilava',2],[157,'Typhlosion',2],[158,'Totodile',2],[159,'Croconaw',2],[160,'Feraligatr',2],
+      [161,'Sentret',2],[162,'Furret',2],[163,'Hoothoot',2],[164,'Noctowl',2],[165,'Ledyba',2],[166,'Ledian',2],[167,'Spinarak',2],[168,'Ariados',2],[169,'Crobat',2],[170,'Chinchou',2],
+      [171,'Lanturn',2],[172,'Pichu',2],[173,'Cleffa',2],[174,'Igglybuff',2],[175,'Togepi',2],[176,'Togetic',2],[177,'Natu',2],[178,'Xatu',2],[179,'Mareep',2],[180,'Flaaffy',2],
+      [181,'Ampharos',2],[182,'Bellossom',2],[183,'Marill',2],[184,'Azumarill',2],[185,'Sudowoodo',2],[186,'Politoed',2],[187,'Hoppip',2],[188,'Skiploom',2],[189,'Jumpluff',2],[190,'Aipom',2],
+      [191,'Sunkern',2],[192,'Sunflora',2],[193,'Yanma',2],[194,'Wooper',2],[195,'Quagsire',2],[196,'Espeon',2],[197,'Umbreon',2],[198,'Murkrow',2],[199,'Slowking',2],[200,'Misdreavus',2],
+      [201,'Unown',2],[202,'Wobbuffet',2],[203,'Girafarig',2],[204,'Pineco',2],[205,'Forretress',2],[206,'Dunsparce',2],[207,'Gligar',2],[208,'Steelix',2],[209,'Snubbull',2],[210,'Granbull',2],
+      [211,'Qwilfish',2],[212,'Scizor',2],[213,'Shuckle',2],[214,'Heracross',2],[215,'Sneasel',2],[216,'Teddiursa',2],[217,'Ursaring',2],[218,'Slugma',2],[219,'Magcargo',2],[220,'Swinub',2],
+      [221,'Piloswine',2],[222,'Corsola',2],[223,'Remoraid',2],[224,'Octillery',2],[225,'Delibird',2],[226,'Mantine',2],[227,'Skarmory',2],[228,'Houndour',2],[229,'Houndoom',2],[230,'Kingdra',2],
+      [231,'Phanpy',2],[232,'Donphan',2],[233,'Porygon2',2],[234,'Stantler',2],[235,'Smeargle',2],[236,'Tyrogue',2],[237,'Hitmontop',2],[238,'Smoochum',2],[239,'Elekid',2],[240,'Magby',2],
+      [241,'Miltank',2],[242,'Blissey',2],[243,'Raikou',2],[244,'Entei',2],[245,'Suicune',2],[246,'Larvitar',2],[247,'Pupitar',2],[248,'Tyranitar',2],[249,'Lugia',2],[250,'Ho-Oh',2],[251,'Celebi',2]
+    ];
+
+    const defaultRecord = (id, name, generation) => ({
+      pokemon_id: id,
+      pokemon_name: name,
+      generation,
+      status: 'missing',
+      card_number: '',
+      set_name: '',
+      rarity: '',
+      language: '',
+      condition: '',
+      acquisition_value: '',
+      acquisition_date: '',
+      notes: ''
+    });
+
+    let records = pokemonList.map(([id, name, generation]) => defaultRecord(id, name, generation));
+    let supabase = null;
+    let currentUser = null;
+    let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    const themeBtn = document.querySelector('[data-theme-toggle]');
+    themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    themeBtn.addEventListener('click', () => {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    });
+
+    const els = {
+      tableBody: document.getElementById('tableBody'),
+      searchInput: document.getElementById('searchInput'),
+      quickSearchInput: document.getElementById('quickSearchInput'),
+      generationFilter: document.getElementById('generationFilter'),
+      quickGenerationFilter: document.getElementById('quickGenerationFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      quickStatusFilter: document.getElementById('quickStatusFilter'),
+      rarityFilter: document.getElementById('rarityFilter'),
+      visibleCount: document.getElementById('visibleCount'),
+      ownedCount: document.getElementById('ownedCount'),
+      wishlistCount: document.getElementById('wishlistCount'),
+      totalValue: document.getElementById('totalValue'),
+      clearSearchBtn: document.getElementById('clearSearchBtn'),
+      clearAllFiltersBtn: document.getElementById('clearAllFiltersBtn'),
+      syncMessage: document.getElementById('syncMessage'),
+      userEmail: document.getElementById('userEmail'),
+      loginOverlay: document.getElementById('loginOverlay'),
+      email: document.getElementById('email'),
+      password: document.getElementById('password'),
+      supabaseUrl: document.getElementById('supabaseUrl'),
+      supabaseAnonKey: document.getElementById('supabaseAnonKey'),
+      authMessage: document.getElementById('authMessage')
+    };
+
+    function normalize(v){return String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+    function currency(v){const n=Number(v)||0;return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+    function setSyncMessage(msg, isError=false){els.syncMessage.textContent=msg;els.syncMessage.style.background=isError?'color-mix(in srgb, var(--color-error) 18%, var(--color-surface))':'var(--color-primary-highlight)';}
+    function setAuthMessage(msg, isError=false){els.authMessage.textContent=msg;els.authMessage.style.background=isError?'color-mix(in srgb, var(--color-error) 18%, var(--color-surface))':'var(--color-primary-highlight)';}
+
+    function getFilters(){
+      return {
+        query: (els.searchInput.value || els.quickSearchInput.value || '').trim(),
+        generation: els.generationFilter.value !== 'all' ? els.generationFilter.value : els.quickGenerationFilter.value,
+        status: els.statusFilter.value !== 'all' ? els.statusFilter.value : els.quickStatusFilter.value,
+        rarity: els.rarityFilter.value
+      };
+    }
+
+    function filteredRecords(){
+      const {query,generation,status,rarity}=getFilters();
+      const q=normalize(query);
+      return records.filter(r=>{
+        const hay = normalize([r.pokemon_id,r.pokemon_name,r.generation,r.status,r.card_number,r.set_name,r.rarity,r.language,r.condition,r.acquisition_value,r.acquisition_date,r.notes].join(' '));
+        const matchQ = !q || hay.includes(q);
+        const matchG = generation === 'all' || String(r.generation) === String(generation);
+        const matchS = status === 'all' || r.status === status;
+        const matchR = rarity === 'all' || r.rarity === rarity;
+        return matchQ && matchG && matchS && matchR;
+      });
+    }
+
+    function updateStats(){
+      const visible = filteredRecords();
+      const owned = records.filter(r=>r.status==='owned').length;
+      const wishlist = records.filter(r=>r.status==='wishlist').length;
+      const total = records.reduce((sum,r)=>sum + (parseFloat(r.acquisition_value)||0),0);
+      els.visibleCount.textContent = visible.length;
+      els.ownedCount.textContent = owned;
+      els.wishlistCount.textContent = wishlist;
+      els.totalValue.textContent = currency(total);
+    }
+
+    function renderTable(){
+      const visible = filteredRecords();
+      els.tableBody.innerHTML = visible.map(r => `
+        <tr data-id="${r.pokemon_id}">
+          <td>${r.pokemon_id}</td>
+          <td><strong>${r.pokemon_name}</strong></td>
+          <td>${r.generation}</td>
+          <td>
+            <select class="cell-select" data-field="status">
+              <option value="missing" ${r.status==='missing'?'selected':''}>Sem registro</option>
+              <option value="owned" ${r.status==='owned'?'selected':''}>Adquirida</option>
+              <option value="wishlist" ${r.status==='wishlist'?'selected':''}>Wishlist</option>
+            </select>
+          </td>
+          <td><input class="cell-input" data-field="card_number" value="${escapeHtml(r.card_number)}"></td>
+          <td><input class="cell-input" data-field="set_name" value="${escapeHtml(r.set_name)}"></td>
+          <td><input class="cell-input" data-field="rarity" value="${escapeHtml(r.rarity)}"></td>
+          <td><input class="cell-input" data-field="language" value="${escapeHtml(r.language)}"></td>
+          <td><input class="cell-input" data-field="condition" value="${escapeHtml(r.condition)}"></td>
+          <td><input class="cell-input" type="number" step="0.01" data-field="acquisition_value" value="${escapeHtml(r.acquisition_value)}"></td>
+          <td><input class="cell-input" type="date" data-field="acquisition_date" value="${escapeHtml(r.acquisition_date)}"></td>
+          <td><textarea class="cell-textarea" data-field="notes">${escapeHtml(r.notes)}</textarea></td>
+        </tr>
+      `).join('');
+      updateStats();
+    }
+
+    function escapeHtml(v){return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+    function syncMirrorInputs(source, target){target.value = source.value;}
+    els.searchInput.addEventListener('input', ()=>{syncMirrorInputs(els.searchInput, els.quickSearchInput); renderTable();});
+    els.quickSearchInput.addEventListener('input', ()=>{syncMirrorInputs(els.quickSearchInput, els.searchInput); renderTable();});
+    els.generationFilter.addEventListener('change', ()=>{els.quickGenerationFilter.value = els.generationFilter.value; renderTable();});
+    els.quickGenerationFilter.addEventListener('change', ()=>{els.generationFilter.value = els.quickGenerationFilter.value; renderTable();});
+    els.statusFilter.addEventListener('change', ()=>{els.quickStatusFilter.value = els.statusFilter.value; renderTable();});
+    els.quickStatusFilter.addEventListener('change', ()=>{els.statusFilter.value = els.quickStatusFilter.value; renderTable();});
+    els.rarityFilter.addEventListener('change', renderTable);
+
+    els.clearSearchBtn.addEventListener('click', ()=>{
+      els.searchInput.value='';
+      els.quickSearchInput.value='';
+      renderTable();
+    });
+    els.clearAllFiltersBtn.addEventListener('click', ()=>{
+      els.searchInput.value=''; els.quickSearchInput.value='';
+      els.generationFilter.value='all'; els.quickGenerationFilter.value='all';
+      els.statusFilter.value='all'; els.quickStatusFilter.value='all';
+      els.rarityFilter.value='all';
+      renderTable();
+    });
+
+    els.tableBody.addEventListener('change', async (e)=>{
+      const field = e.target.dataset.field;
+      if(!field) return;
+      const row = e.target.closest('tr');
+      const id = Number(row.dataset.id);
+      const record = records.find(r=>r.pokemon_id===id);
+      record[field] = e.target.value;
+      updateStats();
+      await saveRecord(record);
+    });
+
+    els.tableBody.addEventListener('input', async (e)=>{
+      const field = e.target.dataset.field;
+      if(!field || e.target.tagName === 'SELECT') return;
+      const row = e.target.closest('tr');
+      const id = Number(row.dataset.id);
+      const record = records.find(r=>r.pokemon_id===id);
+      record[field] = e.target.value;
+      updateStats();
+      clearTimeout(e.target._saveTimer);
+      e.target._saveTimer = setTimeout(()=>saveRecord(record), 600);
+    });
+
+    function createClientOrThrow(){
+      const url = els.supabaseUrl.value.trim();
+      const key = els.supabaseAnonKey.value.trim();
+      if(!url || !key) throw new Error('Informe a URL e a anon key do Supabase.');
+      supabase = window.supabase.createClient(url, key);
+      return supabase;
+    }
+
+    async function signIn(signup=false){
+      try{
+        const client = supabase || createClientOrThrow();
+        const email = els.email.value.trim();
+        const password = els.password.value;
+        if(!email || !password) throw new Error('Informe e-mail e senha.');
+        const method = signup ? client.auth.signUp.bind(client.auth) : client.auth.signInWithPassword.bind(client.auth);
+        const { data, error } = await method({ email, password });
+        if(error) throw error;
+        if(signup && !data.session){
+          setAuthMessage('Conta criada. Confira seu e-mail se a confirmação estiver habilitada. Depois, entre normalmente.');
+          return;
+        }
+        await afterAuth(data.session?.user || data.user || null);
+      }catch(err){
+        setAuthMessage(err.message || 'Falha na autenticação.', true);
+      }
+    }
+
+    async function afterAuth(user){
+      currentUser = user;
+      if(!currentUser){
+        const { data } = await supabase.auth.getUser();
+        currentUser = data.user;
+      }
+      if(!currentUser) throw new Error('Não foi possível identificar o usuário autenticado.');
+      els.userEmail.textContent = currentUser.email;
+      els.loginOverlay.classList.add('hidden');
+      setAuthMessage('Autenticado com sucesso.');
+      setSyncMessage('Carregando seus dados da nuvem...');
+      await loadRemoteData();
+    }
+
+    async function loadRemoteData(){
+      if(!supabase || !currentUser) return;
+      const { data, error } = await supabase
+        .from('pokemon_collection_entries')
+        .select('*')
+        .eq('user_id', currentUser.id);
+      if(error){
+        setSyncMessage('Falha ao ler a tabela. Verifique a criação da tabela e as policies RLS.', true);
+        return;
+      }
+      const map = new Map(data.map(item=>[Number(item.pokemon_id), item]));
+      records = pokemonList.map(([id, name, generation]) => {
+        const remote = map.get(id);
+        return remote ? {
+          pokemon_id: id,
+          pokemon_name: name,
+          generation,
+          status: remote.status || 'missing',
+          card_number: remote.card_number || '',
+          set_name: remote.set_name || '',
+          rarity: remote.rarity || '',
+          language: remote.language || '',
+          condition: remote.condition || '',
+          acquisition_value: remote.acquisition_value ?? '',
+          acquisition_date: remote.acquisition_date || '',
+          notes: remote.notes || ''
+        } : defaultRecord(id,name,generation);
+      });
+      renderTable();
+      setSyncMessage('Dados carregados e prontos para sincronização automática.');
+    }
+
+    async function saveRecord(record){
+      if(!supabase || !currentUser) return;
+      const payload = {
+        user_id: currentUser.id,
+        pokemon_id: record.pokemon_id,
+        pokemon_name: record.pokemon_name,
+        generation: record.generation,
+        status: record.status || 'missing',
+        card_number: record.card_number || null,
+        set_name: record.set_name || null,
+        rarity: record.rarity || null,
+        language: record.language || null,
+        condition: record.condition || null,
+        acquisition_value: record.acquisition_value === '' ? null : Number(record.acquisition_value),
+        acquisition_date: record.acquisition_date || null,
+        notes: record.notes || null,
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await supabase.from('pokemon_collection_entries').upsert(payload);
+      setSyncMessage(error ? 'Erro ao salvar na nuvem. Revise a estrutura da tabela e as permissões.' : `Salvo na nuvem: ${record.pokemon_name}.`, !!error);
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', ()=>signIn(false));
+    document.getElementById('signupBtn').addEventListener('click', ()=>signIn(true));
+    document.getElementById('syncBtn').addEventListener('click', loadRemoteData);
+    document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+      if(supabase) await supabase.auth.signOut();
+      currentUser = null;
+      els.userEmail.textContent = '—';
+      els.loginOverlay.classList.remove('hidden');
+      setSyncMessage('Sessão encerrada.');
+    });
+
+    document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+      const rows = [['pokemon_id','pokemon_name','generation','status','card_number','set_name','rarity','language','condition','acquisition_value','acquisition_date','notes']]
+        .concat(records.map(r=>[r.pokemon_id,r.pokemon_name,r.generation,r.status,r.card_number,r.set_name,r.rarity,r.language,r.condition,r.acquisition_value,r.acquisition_date,r.notes]));
+      const csv = rows.map(row=>row.map(v=>`"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'pokemon-tcg-cloud-tracker.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+
+    if (window.location.hash === '#demo') {
+      els.loginOverlay.classList.add('hidden');
+      setSyncMessage('Modo demonstração ativo. Para usar a nuvem, entre com Supabase.');
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>
